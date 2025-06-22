@@ -1,10 +1,9 @@
 import pytest
 import time
-import os
 from unittest.mock import patch, MagicMock
 
 from novel_notify.database import DatabaseManager
-from novel_notify.database.models import NovelMetadata, Chapter, UserSubscription
+from novel_notify.database.models import NovelMetadata, Chapter
 
 # Test data
 TEST_NOVEL_ID_1 = "db_novel_1"

@@ -1,10 +1,9 @@
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 import httpx
 from bs4 import BeautifulSoup # Added import
 
 from novel_notify.scraper import WebNovelScraper
-from novel_notify.database.models import NovelMetadata, Chapter, Volume
 from novel_notify.config import config # Import config to potentially mock its values if needed
 
 # Sample HTML snippets for testing

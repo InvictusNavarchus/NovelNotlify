@@ -6,7 +6,6 @@ from novel_notify.bot.scheduler import UpdateScheduler
 from novel_notify.database import DatabaseManager
 from novel_notify.database.models import NovelMetadata, Chapter, UserSubscription
 from novel_notify.scraper import WebNovelScraper
-from novel_notify.config import config
 
 # Test data
 TEST_NOVEL_ID_SCHED_1 = "sched_novel_1"
