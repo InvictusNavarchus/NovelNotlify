@@ -111,16 +111,19 @@ class UpdateScheduler:
                 logger.warning(f"Could not fetch latest chapter for novel {novel_id}")
                 return
             
+            # Always update the last_updated timestamp to show when we last checked
+            current_metadata.last_updated = time.time()
+            
             # Check if there's an update
             if latest_chapter.title == current_metadata.latest_chapter.title:
-                # No update
+                # No update found, but save the updated timestamp
+                self.db.save_novel_metadata(current_metadata)
                 return
             
             logger.info(f"Update found for novel {current_metadata.novel_title}: {latest_chapter.title}")
             
-            # Update metadata
+            # Update metadata with new chapter
             current_metadata.latest_chapter = latest_chapter
-            current_metadata.last_updated = time.time()
             self.db.save_novel_metadata(current_metadata)
             
             # Notify subscribers

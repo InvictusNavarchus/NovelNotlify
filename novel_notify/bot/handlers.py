@@ -14,7 +14,7 @@ from telegram.constants import ParseMode
 from ..database import DatabaseManager
 from ..database.models import NovelMetadata, UserSubscription
 from ..scraper import WebNovelScraper
-from ..utils import extract_novel_id_from_url, format_novel_url, format_time_ago, truncate_text, format_published_time
+from ..utils import extract_novel_id_from_url, format_novel_url, format_time_ago, truncate_text, format_published_time, format_published_time
 
 logger = logging.getLogger(__name__)
 
@@ -256,8 +256,8 @@ Need more help? Just ask! 😊
 📖 **{metadata.novel_title}**
 ✍️ Author: {metadata.author}
 📚 Latest: {metadata.latest_chapter.title}
-� Published: {metadata.latest_chapter.published}
-�🔔 Notifications: Enabled
+📅 Published: {metadata.latest_chapter.published}
+🔔 Notifications: Enabled
 
 I'll notify you when new chapters are released!
             """
@@ -307,8 +307,8 @@ I'll notify you when new chapters are released!
 **{i}.** {status} **{truncate_text(metadata.novel_title, 40)}**
 ✍️ {metadata.author}
 📚 {metadata.latest_chapter.title}
-� Published: {metadata.latest_chapter.published}
-�🕒 Updated {time_ago}
+📅 Published: {metadata.latest_chapter.published}
+� Last checked {time_ago}
 """
                 message_parts.append(novel_info)
         
@@ -442,11 +442,13 @@ I'll notify you when new chapters are released!
                         if not latest_chapter:
                             continue
                         
+                        # Always update the last_updated timestamp to show when we last checked
+                        current_metadata.last_updated = time.time()
+                        
                         # Check if there's an update
                         if latest_chapter.title != current_metadata.latest_chapter.title:
-                            # Update metadata
+                            # Update metadata with new chapter
                             current_metadata.latest_chapter = latest_chapter
-                            current_metadata.last_updated = time.time()
                             self.db.save_novel_metadata(current_metadata)
                             
                             updates_found.append({
@@ -455,6 +457,9 @@ I'll notify you when new chapters are released!
                                 'url': format_novel_url(subscription.novel_id),
                                 'published': latest_chapter.published
                             })
+                        else:
+                            # No update found, but save the updated timestamp
+                            self.db.save_novel_metadata(current_metadata)
                         
                         # Small delay to avoid rate limiting
                         await asyncio.sleep(1)
