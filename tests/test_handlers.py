@@ -5,9 +5,9 @@ from telegram.ext import ConversationHandler
 
 from novel_notify.bot.handlers import WAITING_FOR_URL
 from novel_notify.database.models import NovelMetadata, Chapter, UserSubscription # Changed ChapterMetadata to Chapter
+from .conftest import TEST_USER_ID
 
 # Test data
-TEST_USER_ID = 123
 TEST_NOVEL_ID = "12345678901234567" # Webnovel IDs are typically 17 digits
 TEST_NOVEL_URL = f"https://www.webnovel.com/book/{TEST_NOVEL_ID}"
 INVALID_NOVEL_URL = "https://invalid.url/book/123"

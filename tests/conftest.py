@@ -78,13 +78,16 @@ def bot_handlers(mock_db_manager):
     """Fixture for BotHandlers with a mock DatabaseManager."""
     return BotHandlers(db_manager=mock_db_manager)
 
+# Test constants - shared across test files
+TEST_USER_ID = 123
+
 @pytest.fixture
 def mock_update():
     """Fixture for a mock Update object."""
     update = MagicMock(spec=Update)
-    update.effective_user = User(id=123, first_name="Test", is_bot=False)
+    update.effective_user = User(id=TEST_USER_ID, first_name="Test", is_bot=False)
     update.message = MagicMock(spec=Message)
-    update.message.chat = Chat(id=123, type="private")
+    update.message.chat = Chat(id=TEST_USER_ID, type="private")
     update.message.reply_text = AsyncMock()
     update.message.reply_markdown = AsyncMock() # if you use reply_markdown
     update.callback_query = None # Or MagicMock() if you test callback queries
