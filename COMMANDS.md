@@ -32,23 +32,6 @@ https://www.webnovel.com/book/32382246008650205
 /remove 1
 ```
 
-## Service Management
-```bash
-# Install as service (run once)
-sudo cp novel-notify.service /etc/systemd/system/
-sudo systemctl enable novel-notify.service
-
-# Start/stop service
-sudo systemctl start novel-notify.service
-sudo systemctl stop novel-notify.service
-
-# Check status
-sudo systemctl status novel-notify.service
-
-# View logs
-sudo journalctl -u novel-notify.service -f
-```
-
 ## Troubleshooting
 ```bash
 # Check if dependencies are installed
