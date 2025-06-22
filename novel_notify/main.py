@@ -14,6 +14,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, Conversati
 from .config import config
 from .database import DatabaseManager
 from .bot import BotHandlers, UpdateScheduler
+from .bot.handlers import WAITING_FOR_URL
 
 # Configure logging
 logging.basicConfig(
@@ -128,7 +129,7 @@ async def main():
         add_novel_conversation = ConversationHandler(
             entry_points=[CommandHandler("add", handlers.add_novel_command)],
             states={
-                handlers.WAITING_FOR_URL: [
+                WAITING_FOR_URL: [
                     MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.receive_url)
                 ]
             },
