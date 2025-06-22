@@ -14,7 +14,7 @@ from telegram.constants import ParseMode
 from ..database import DatabaseManager
 from ..database.models import NovelMetadata, UserSubscription
 from ..scraper import WebNovelScraper
-from ..utils import extract_novel_id_from_url, format_novel_url, format_time_ago, truncate_text
+from ..utils import extract_novel_id_from_url, format_novel_url, format_time_ago, truncate_text, format_published_time
 
 logger = logging.getLogger(__name__)
 
@@ -256,7 +256,8 @@ Need more help? Just ask! 😊
 📖 **{metadata.novel_title}**
 ✍️ Author: {metadata.author}
 📚 Latest: {metadata.latest_chapter.title}
-🔔 Notifications: Enabled
+� Published: {metadata.latest_chapter.published}
+�🔔 Notifications: Enabled
 
 I'll notify you when new chapters are released!
             """
@@ -306,7 +307,8 @@ I'll notify you when new chapters are released!
 **{i}.** {status} **{truncate_text(metadata.novel_title, 40)}**
 ✍️ {metadata.author}
 📚 {metadata.latest_chapter.title}
-🕒 Updated {time_ago}
+� Published: {metadata.latest_chapter.published}
+�🕒 Updated {time_ago}
 """
                 message_parts.append(novel_info)
         
@@ -450,7 +452,8 @@ I'll notify you when new chapters are released!
                             updates_found.append({
                                 'title': current_metadata.novel_title,
                                 'chapter': latest_chapter.title,
-                                'url': format_novel_url(subscription.novel_id)
+                                'url': format_novel_url(subscription.novel_id),
+                                'published': latest_chapter.published
                             })
                         
                         # Small delay to avoid rate limiting
@@ -467,7 +470,8 @@ I'll notify you when new chapters are released!
                     message_parts.append(
                         f"📖 **{update_info['title']}**\n"
                         f"📚 {update_info['chapter']}\n"
-                        f"🔗 [Read Now]({update_info['url']})\n"
+                        f"� Published: {update_info['published']}\n"
+                        f"�🔗 [Read Now]({update_info['url']})\n"
                     )
                 
                 await processing_msg.edit_text(

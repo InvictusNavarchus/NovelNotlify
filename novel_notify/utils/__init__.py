@@ -144,3 +144,27 @@ def truncate_text(text: str, max_length: int = 100) -> str:
     if len(text) <= max_length:
         return text
     return text[:max_length - 3] + "..."
+
+
+def format_published_time(published_str: str) -> str:
+    """
+    Format published time string from scraper
+    
+    Args:
+        published_str: Raw published time string from WebNovel
+        
+    Returns:
+        Formatted published time string
+    """
+    if not published_str or published_str.lower() in ['unknown', 'unknown date']:
+        return "📅 Unknown"
+    
+    # Clean up the string
+    cleaned = published_str.strip()
+    
+    # If it already looks formatted, return as is
+    if any(prefix in cleaned.lower() for prefix in ['📅', 'published:', 'published', 'date:']):
+        return cleaned
+    
+    # Add appropriate prefix if missing
+    return f"📅 {cleaned}"
