@@ -66,6 +66,10 @@ async def test_add_novel_command_with_url(bot_handlers, mock_update, mock_contex
 
         result = await bot_handlers.add_novel_command(mock_update, mock_context)
 
+    # Verify database methods are called with correct parameters
+    mock_db_manager.save_novel_metadata.assert_called_once_with(SAMPLE_NOVEL_METADATA)
+    mock_db_manager.add_subscription.assert_called_once_with(TEST_USER_ID, TEST_NOVEL_ID)
+
     mock_update.message.reply_text.assert_called_once_with(
         "🔄 **Processing...**\n\nFetching novel information from WebNovel...",
         parse_mode='Markdown'
@@ -108,6 +112,10 @@ async def test_receive_url_valid(bot_handlers, mock_update, mock_context, mock_d
         mock_db_manager.add_subscription = MagicMock(return_value=True)
 
         result = await bot_handlers.receive_url(mock_update, mock_context)
+
+    # Verify database methods are called with correct parameters
+    mock_db_manager.save_novel_metadata.assert_called_once_with(SAMPLE_NOVEL_METADATA)
+    mock_db_manager.add_subscription.assert_called_once_with(TEST_USER_ID, TEST_NOVEL_ID)
 
     mock_update.message.reply_text.assert_called_once_with(
         "🔄 **Processing...**\n\nFetching novel information from WebNovel...",
@@ -206,10 +214,33 @@ async def test_remove_novel_command_valid(bot_handlers, mock_update, mock_contex
 
     await bot_handlers.remove_novel_command(mock_update, mock_context)
 
+    # Verify remove_subscription is called with correct parameters
+    mock_db_manager.remove_subscription.assert_called_once_with(TEST_USER_ID, TEST_NOVEL_ID)
+    
     mock_update.message.reply_text.assert_called_once()
     call_args = mock_update.message.reply_text.call_args[0][0]
     assert "Novel Removed" in call_args
     assert SAMPLE_NOVEL_METADATA.novel_title in call_args
+
+
+@pytest.mark.asyncio
+async def test_remove_novel_command_database_failure(bot_handlers, mock_update, mock_context, mock_db_manager):
+    """Test /remove command when database remove operation fails."""
+    mock_context.args = ["1"]
+    subscriptions = [UserSubscription(user_id=TEST_USER_ID, novel_id=TEST_NOVEL_ID, notifications_enabled=True)]
+    mock_db_manager.get_user_subscriptions = MagicMock(return_value=subscriptions)
+    mock_db_manager.get_novel_metadata = MagicMock(return_value=SAMPLE_NOVEL_METADATA)
+    mock_db_manager.remove_subscription = MagicMock(return_value=False)  # Simulate failure
+
+    await bot_handlers.remove_novel_command(mock_update, mock_context)
+
+    # Verify remove_subscription is called with correct parameters
+    mock_db_manager.remove_subscription.assert_called_once_with(TEST_USER_ID, TEST_NOVEL_ID)
+    
+    mock_update.message.reply_text.assert_called_once()
+    call_args = mock_update.message.reply_text.call_args[0][0]
+    assert "Error" in call_args
+    assert "Failed to remove novel" in call_args
 
 
 @pytest.mark.asyncio
@@ -301,6 +332,10 @@ async def test_handle_url_message_valid_url(bot_handlers, mock_update, mock_cont
 
         await bot_handlers.handle_url_message(mock_update, mock_context)
 
+    # Verify database methods are called with correct parameters
+    mock_db_manager.save_novel_metadata.assert_called_once_with(SAMPLE_NOVEL_METADATA)
+    mock_db_manager.add_subscription.assert_called_once_with(TEST_USER_ID, TEST_NOVEL_ID)
+
     # Similar assertions to add_novel_command with URL
     mock_update.message.reply_text.assert_called_once_with(
         "🔄 **Processing...**\n\nFetching novel information from WebNovel...",
@@ -369,6 +404,9 @@ async def test_process_novel_url_db_save_metadata_fails(bot_handlers, mock_updat
 
         await bot_handlers._process_novel_url(mock_update, mock_context, TEST_NOVEL_URL)
 
+    # Verify save_novel_metadata is called with correct parameter
+    mock_db_manager.save_novel_metadata.assert_called_once_with(SAMPLE_NOVEL_METADATA)
+    
     mock_update.message.reply_text.return_value.edit_text.assert_called_once()
     edit_call_args = mock_update.message.reply_text.return_value.edit_text.call_args[0][0]
     assert "Database Error" in edit_call_args
@@ -387,6 +425,10 @@ async def test_process_novel_url_db_add_subscription_fails(bot_handlers, mock_up
         mock_db_manager.add_subscription = MagicMock(return_value=False) # DB add subscription fails
 
         await bot_handlers._process_novel_url(mock_update, mock_context, TEST_NOVEL_URL)
+
+    # Verify database methods are called with correct parameters
+    mock_db_manager.save_novel_metadata.assert_called_once_with(SAMPLE_NOVEL_METADATA)
+    mock_db_manager.add_subscription.assert_called_once_with(TEST_USER_ID, TEST_NOVEL_ID)
 
     mock_update.message.reply_text.return_value.edit_text.assert_called_once()
     edit_call_args = mock_update.message.reply_text.return_value.edit_text.call_args[0][0]
