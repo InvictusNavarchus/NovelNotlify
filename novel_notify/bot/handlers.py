@@ -308,7 +308,7 @@ I'll notify you when new chapters are released!
 ✍️ {metadata.author}
 📚 {metadata.latest_chapter.title}
 📅 Published: {metadata.latest_chapter.published}
-� Last checked {time_ago}
+⏳ Last checked {time_ago}
 """
                 message_parts.append(novel_info)
         
