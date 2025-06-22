@@ -313,3 +313,137 @@ class WebNovelScraper:
         except Exception as e:
             logger.error(f"Failed to quick check latest chapter for {novel_id}: {e}")
             return None
+
+    async def get_last_free_chapter(self, novel_id: str) -> Optional[Chapter]:
+        """
+        Get the last free chapter from the chapter list
+        
+        Args:
+            novel_id: The novel ID
+            
+        Returns:
+            Last free chapter if found, None otherwise
+        """
+        try:
+            catalog_url = f"{config.webnovel_base_url}/book/{novel_id}/catalog"
+            response = await self.client.get(catalog_url)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            return self._extract_last_free_chapter(soup)
+            
+        except Exception as e:
+            logger.error(f"Failed to get last free chapter for {novel_id}: {e}")
+            return None
+
+    async def compare_latest_chapters(self, novel_id: str) -> Dict[str, Any]:
+        """
+        Compare the latest chapter (possibly paid) with the last free chapter
+        
+        Args:
+            novel_id: The novel ID
+            
+        Returns:
+            Dictionary with comparison results
+        """
+        try:
+            catalog_url = f"{config.webnovel_base_url}/book/{novel_id}/catalog"
+            response = await self.client.get(catalog_url)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Get the latest chapter (from top of page - might be paid)
+            latest_chapter = self._extract_latest_chapter(soup)
+            
+            # Get the last free chapter (from chapter list)
+            last_free_chapter = self._extract_last_free_chapter(soup)
+            
+            # Determine if there are paid chapters
+            has_paid_chapters = False
+            if latest_chapter and last_free_chapter:
+                has_paid_chapters = latest_chapter.title != last_free_chapter.title
+            
+            return {
+                'latest_chapter': latest_chapter,
+                'last_free_chapter': last_free_chapter,
+                'has_paid_chapters': has_paid_chapters,
+                'chapter_difference': self._calculate_chapter_difference(latest_chapter, last_free_chapter)
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to compare latest chapters for {novel_id}: {e}")
+            return {
+                'latest_chapter': None,
+                'last_free_chapter': None,
+                'has_paid_chapters': False,
+                'chapter_difference': None
+            }
+
+    def _extract_last_free_chapter(self, soup: BeautifulSoup) -> Optional[Chapter]:
+        """
+        Extract the last free chapter from the chapter list
+        
+        Args:
+            soup: BeautifulSoup object of the catalog page
+            
+        Returns:
+            Last free chapter if found, None otherwise
+        """
+        try:
+            # Get all chapter elements from all volumes
+            all_chapters = []
+            
+            # Find all volume containers
+            volume_elements = soup.select('.volume-item')
+            
+            if volume_elements:
+                # Process each volume
+                for volume_element in volume_elements:
+                    chapter_elements = volume_element.select('ol.content-list > li')
+                    for chapter_element in chapter_elements:
+                        chapter = self._extract_single_chapter(chapter_element)
+                        if chapter:
+                            all_chapters.append(chapter)
+            else:
+                # No volume structure, get chapters directly
+                chapter_elements = soup.select('ol.content-list > li')
+                for chapter_element in chapter_elements:
+                    chapter = self._extract_single_chapter(chapter_element)
+                    if chapter:
+                        all_chapters.append(chapter)
+            
+            # Find the last free chapter (iterate from the end)
+            for chapter in reversed(all_chapters):
+                if not chapter.is_locked:
+                    logger.info(f"Found last free chapter: {chapter.title}")
+                    return chapter
+            
+            # If no free chapters found, return None
+            logger.warning("No free chapters found in chapter list")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error extracting last free chapter: {e}")
+            return None
+
+    def _calculate_chapter_difference(self, latest_chapter: Optional[Chapter], last_free_chapter: Optional[Chapter]) -> Optional[int]:
+        """
+        Calculate the difference between latest chapter and last free chapter
+        
+        Args:
+            latest_chapter: The latest chapter (possibly paid)
+            last_free_chapter: The last free chapter
+            
+        Returns:
+            Number of chapters difference, or None if cannot be calculated
+        """
+        if not latest_chapter or not last_free_chapter:
+            return None
+        
+        # Try to extract chapter numbers for comparison
+        if latest_chapter.chapter_number and last_free_chapter.chapter_number:
+            return latest_chapter.chapter_number - last_free_chapter.chapter_number
+        
+        # If no chapter numbers, we can't calculate the difference
+        return None

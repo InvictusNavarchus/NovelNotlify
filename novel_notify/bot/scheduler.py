@@ -105,34 +105,45 @@ class UpdateScheduler:
                 logger.warning(f"No metadata found for novel {novel_id}")
                 return
             
-            # Quick check for latest chapter
-            latest_chapter = await scraper.quick_check_latest_chapter(novel_id)
-            if not latest_chapter:
+            # Compare latest chapter with last free chapter
+            comparison = await scraper.compare_latest_chapters(novel_id)
+            if not comparison['latest_chapter']:
                 logger.warning(f"Could not fetch latest chapter for novel {novel_id}")
                 return
+            
+            latest_chapter = comparison['latest_chapter']
+            last_free_chapter = comparison['last_free_chapter']
+            has_paid_chapters = comparison['has_paid_chapters']
             
             # Always update the last_updated timestamp to show when we last checked
             current_metadata.last_updated = time.time()
             
+            # Determine which chapter to use for comparison and notification
+            # We prioritize free chapters for notifications
+            chapter_for_notification = last_free_chapter if last_free_chapter else latest_chapter
+            
             # Check if there's an update
-            if latest_chapter.title == current_metadata.latest_chapter.title:
+            if chapter_for_notification.title == current_metadata.latest_chapter.title:
                 # No update found, but save the updated timestamp
                 self.db.save_novel_metadata(current_metadata)
                 return
             
-            logger.info(f"Update found for novel {current_metadata.novel_title}: {latest_chapter.title}")
+            logger.info(f"Update found for novel {current_metadata.novel_title}: {chapter_for_notification.title}")
             
-            # Update metadata with new chapter
-            current_metadata.latest_chapter = latest_chapter
+            if has_paid_chapters and last_free_chapter:
+                logger.info(f"Novel has paid chapters. Latest: {latest_chapter.title}, Last Free: {last_free_chapter.title}")
+            
+            # Update metadata with new chapter (use the one for notification)
+            current_metadata.latest_chapter = chapter_for_notification
             self.db.save_novel_metadata(current_metadata)
             
             # Notify subscribers
-            await self._notify_subscribers(novel_id, current_metadata, latest_chapter)
+            await self._notify_subscribers(novel_id, current_metadata, chapter_for_notification, has_paid_chapters)
             
         except Exception as e:
             logger.error(f"Error checking single novel {novel_id}: {e}")
     
-    async def _notify_subscribers(self, novel_id: str, metadata, new_chapter):
+    async def _notify_subscribers(self, novel_id: str, metadata, new_chapter, has_paid_chapters: bool = False):
         """
         Notify all subscribers of a novel about the new chapter
         
@@ -140,6 +151,7 @@ class UpdateScheduler:
             novel_id: Novel ID
             metadata: Novel metadata
             new_chapter: New chapter information
+            has_paid_chapters: Whether the novel has paid chapters
         """
         try:
             # Get all subscribers for this novel
@@ -151,18 +163,21 @@ class UpdateScheduler:
             logger.info(f"Notifying {len(subscriber_ids)} subscribers about update for {metadata.novel_title}")
             
             # Prepare notification message
+            chapter_type = "🆓 Free" if not new_chapter.is_locked else "🔐 Paid"
+            paid_chapters_note = "\n\n⚠️ *Note: This novel has paid chapters. This notification is for the latest free chapter.*" if has_paid_chapters else ""
+            
             notification_message = f"""
 🆕 **New Chapter Available!**
 
 📖 **{metadata.novel_title}**
 ✍️ Author: {metadata.author}
 
-📚 **Latest Chapter:**
+📚 **Latest {chapter_type} Chapter:**
 {new_chapter.title}
 
 🔗 [Read Now](https://www.webnovel.com/book/{novel_id})
 
-🕒 Published: {new_chapter.published}
+🕒 Published: {new_chapter.published}{paid_chapters_note}
             """
             
             # Send notifications to all subscribers

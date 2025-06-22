@@ -437,25 +437,36 @@ I'll notify you when new chapters are released!
                         if not current_metadata:
                             continue
                         
-                        # Quick check for latest chapter
-                        latest_chapter = await scraper.quick_check_latest_chapter(subscription.novel_id)
-                        if not latest_chapter:
+                        # Compare latest chapter with last free chapter
+                        comparison = await scraper.compare_latest_chapters(subscription.novel_id)
+                        if not comparison['latest_chapter']:
                             continue
+                        
+                        latest_chapter = comparison['latest_chapter']
+                        last_free_chapter = comparison['last_free_chapter']
+                        has_paid_chapters = comparison['has_paid_chapters']
                         
                         # Always update the last_updated timestamp to show when we last checked
                         current_metadata.last_updated = time.time()
                         
+                        # Determine which chapter to use for comparison and notification
+                        # We prioritize free chapters for notifications
+                        chapter_for_notification = last_free_chapter if last_free_chapter else latest_chapter
+                        
                         # Check if there's an update
-                        if latest_chapter.title != current_metadata.latest_chapter.title:
+                        if chapter_for_notification.title != current_metadata.latest_chapter.title:
                             # Update metadata with new chapter
-                            current_metadata.latest_chapter = latest_chapter
+                            current_metadata.latest_chapter = chapter_for_notification
                             self.db.save_novel_metadata(current_metadata)
+                            
+                            chapter_type = "🆓 Free" if not chapter_for_notification.is_locked else "🔐 Paid"
+                            paid_note = " (Latest Free)" if has_paid_chapters and last_free_chapter else ""
                             
                             updates_found.append({
                                 'title': current_metadata.novel_title,
-                                'chapter': latest_chapter.title,
+                                'chapter': f"{chapter_type}: {chapter_for_notification.title}{paid_note}",
                                 'url': format_novel_url(subscription.novel_id),
-                                'published': latest_chapter.published
+                                'published': chapter_for_notification.published
                             })
                         else:
                             # No update found, but save the updated timestamp
