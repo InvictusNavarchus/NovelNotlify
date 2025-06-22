@@ -8,7 +8,7 @@ import signal
 import sys
 from typing import Optional
 
-from telegram import Update
+from telegram import Update, BotCommand
 from telegram.ext import Application, CommandHandler, MessageHandler, ConversationHandler, filters
 
 from .config import config
@@ -157,6 +157,20 @@ async def main():
         # Start bot
         logger.info("Bot starting...")
         await app.initialize()
+        
+        # Register bot commands
+        commands = [
+            BotCommand("start", "Start the bot and get welcome message"),
+            BotCommand("help", "Show help message with available commands"),
+            BotCommand("add", "Add a new novel to track"),
+            BotCommand("list", "List all your tracked novels"),
+            BotCommand("remove", "Remove a novel from tracking"),
+            BotCommand("check", "Check for updates on your tracked novels"),
+            BotCommand("cancel", "Cancel current operation")
+        ]
+        await app.bot.set_my_commands(commands)
+        logger.info("Bot commands registered")
+        
         await app.start()
         await app.updater.start_polling(
             drop_pending_updates=True,
