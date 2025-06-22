@@ -1,8 +1,6 @@
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, call
-import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
 import time
-import unittest
 
 from novel_notify.bot.scheduler import UpdateScheduler
 from novel_notify.database import DatabaseManager

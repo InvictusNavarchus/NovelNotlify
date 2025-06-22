@@ -3,7 +3,7 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 from telegram import Update, User, Message, Chat
-from telegram.ext import Application, ContextTypes, ApplicationBuilder
+from telegram.ext import ContextTypes
 
 from novel_notify.database import DatabaseManager
 from novel_notify.bot.handlers import BotHandlers
