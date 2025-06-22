@@ -171,7 +171,10 @@ async def test_manual_check_novel_success(MockScraperClass, update_scheduler, mo
 
 @pytest.mark.asyncio
 @patch('novel_notify.bot.scheduler.WebNovelScraper')
-async def test_manual_check_novel_exception(MockScraperClass, update_scheduler):
+async def test_manual_check_novel_exception(MockScraperClass, update_scheduler, mock_db_manager_for_scheduler):
+    # Setup database mock to return metadata (needed for the check to proceed)
+    mock_db_manager_for_scheduler.get_novel_metadata.return_value = METADATA_SCHED_1
+    
     mock_instance = AsyncMock(spec=WebNovelScraper)
     MockScraperClass.return_value = mock_instance
     mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)

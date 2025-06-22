@@ -60,9 +60,9 @@ def mock_config_object(mocker, mock_config_values):
 
 
 @pytest.fixture
-async def mock_application(mock_config_object): # Depends on the mocked config
+def mock_application(mock_config_object): # Depends on the mocked config
     """Fixture for a mock Application object."""
-    application = ApplicationBuilder().token(mock_config_object.telegram_bot_token).build()
+    application = MagicMock()
     application.bot = AsyncMock()
     return application
 
@@ -112,3 +112,9 @@ def mock_scraper():
     # scraper.scrape_novel_metadata.return_value = ...
     # scraper.quick_check_latest_chapter.return_value = ...
     return scraper
+
+@pytest.fixture
+def scraper():
+    """Fixture for a real WebNovelScraper instance."""
+    from novel_notify.scraper import WebNovelScraper
+    return WebNovelScraper()

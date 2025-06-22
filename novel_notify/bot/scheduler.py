@@ -97,40 +97,39 @@ class UpdateScheduler:
         Args:
             scraper: WebNovel scraper instance
             novel_id: Novel ID to check
+            
+        Raises:
+            Exception: If there's an error during the check process
         """
-        try:
-            # Get current metadata
-            current_metadata = self.db.get_novel_metadata(novel_id)
-            if not current_metadata:
-                logger.warning(f"No metadata found for novel {novel_id}")
-                return
-            
-            # Quick check for latest chapter
-            latest_chapter = await scraper.quick_check_latest_chapter(novel_id)
-            if not latest_chapter:
-                logger.warning(f"Could not fetch latest chapter for novel {novel_id}")
-                return
-            
-            # Always update the last_updated timestamp to show when we last checked
-            current_metadata.last_updated = time.time()
-            
-            # Check if there's an update
-            if latest_chapter.title == current_metadata.latest_chapter.title:
-                # No update found, but save the updated timestamp
-                self.db.save_novel_metadata(current_metadata)
-                return
-            
-            logger.info(f"Update found for novel {current_metadata.novel_title}: {latest_chapter.title}")
-            
-            # Update metadata with new chapter
-            current_metadata.latest_chapter = latest_chapter
+        # Get current metadata
+        current_metadata = self.db.get_novel_metadata(novel_id)
+        if not current_metadata:
+            logger.warning(f"No metadata found for novel {novel_id}")
+            return
+        
+        # Quick check for latest chapter
+        latest_chapter = await scraper.quick_check_latest_chapter(novel_id)
+        if not latest_chapter:
+            logger.warning(f"Could not fetch latest chapter for novel {novel_id}")
+            return
+        
+        # Always update the last_updated timestamp to show when we last checked
+        current_metadata.last_updated = time.time()
+        
+        # Check if there's an update
+        if latest_chapter.title == current_metadata.latest_chapter.title:
+            # No update found, but save the updated timestamp
             self.db.save_novel_metadata(current_metadata)
-            
-            # Notify subscribers
-            await self._notify_subscribers(novel_id, current_metadata, latest_chapter)
-            
-        except Exception as e:
-            logger.error(f"Error checking single novel {novel_id}: {e}")
+            return
+        
+        logger.info(f"Update found for novel {current_metadata.novel_title}: {latest_chapter.title}")
+        
+        # Update metadata with new chapter
+        current_metadata.latest_chapter = latest_chapter
+        self.db.save_novel_metadata(current_metadata)
+        
+        # Notify subscribers
+        await self._notify_subscribers(novel_id, current_metadata, latest_chapter)
     
     async def _notify_subscribers(self, novel_id: str, metadata, new_chapter):
         """

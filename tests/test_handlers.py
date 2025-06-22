@@ -52,11 +52,13 @@ async def test_add_novel_command_with_url(bot_handlers, mock_update, mock_contex
     mock_context.args = [TEST_NOVEL_URL]
 
     # Mock scraper and database methods
-    with patch('novel_notify.bot.handlers.WebNovelScraper', new_callable=AsyncMock) as MockWebNovelScraperClass:
-        mock_scraper_instance = MockWebNovelScraperClass.return_value
-        mock_scraper_instance.__aenter__ = AsyncMock(return_value=mock_scraper_instance)
-        mock_scraper_instance.__aexit__ = AsyncMock(return_value=None)
+    with patch('novel_notify.bot.handlers.WebNovelScraper') as MockWebNovelScraperClass:
+        mock_scraper_instance = AsyncMock()
         mock_scraper_instance.scrape_novel_metadata = AsyncMock(return_value=SAMPLE_NOVEL_METADATA)
+        
+        # Mock the async context manager
+        MockWebNovelScraperClass.return_value.__aenter__ = AsyncMock(return_value=mock_scraper_instance)
+        MockWebNovelScraperClass.return_value.__aexit__ = AsyncMock(return_value=None)
 
         mock_db_manager.get_user_subscriptions = MagicMock(return_value=[])
         mock_db_manager.save_novel_metadata = MagicMock(return_value=True)
@@ -93,11 +95,13 @@ async def test_receive_url_valid(bot_handlers, mock_update, mock_context, mock_d
     """Test receive_url handler with a valid URL."""
     mock_update.message.text = TEST_NOVEL_URL
 
-    with patch('novel_notify.bot.handlers.WebNovelScraper', new_callable=AsyncMock) as MockWebNovelScraperClass:
-        mock_scraper_instance = MockWebNovelScraperClass.return_value
-        mock_scraper_instance.__aenter__ = AsyncMock(return_value=mock_scraper_instance)
-        mock_scraper_instance.__aexit__ = AsyncMock(return_value=None)
+    with patch('novel_notify.bot.handlers.WebNovelScraper') as MockWebNovelScraperClass:
+        mock_scraper_instance = AsyncMock()
         mock_scraper_instance.scrape_novel_metadata = AsyncMock(return_value=SAMPLE_NOVEL_METADATA)
+        
+        # Mock the async context manager
+        MockWebNovelScraperClass.return_value.__aenter__ = AsyncMock(return_value=mock_scraper_instance)
+        MockWebNovelScraperClass.return_value.__aexit__ = AsyncMock(return_value=None)
 
         mock_db_manager.get_user_subscriptions = MagicMock(return_value=[])
         mock_db_manager.save_novel_metadata = MagicMock(return_value=True)
@@ -225,12 +229,14 @@ async def test_check_updates_command_no_updates(bot_handlers, mock_update, mock_
     mock_db_manager.get_user_subscriptions = MagicMock(return_value=subscriptions)
     mock_db_manager.get_novel_metadata = MagicMock(return_value=SAMPLE_NOVEL_METADATA)
 
-    with patch('novel_notify.bot.handlers.WebNovelScraper', new_callable=AsyncMock) as MockWebNovelScraperClass:
-        mock_scraper_instance = MockWebNovelScraperClass.return_value
-        mock_scraper_instance.__aenter__ = AsyncMock(return_value=mock_scraper_instance)
-        mock_scraper_instance.__aexit__ = AsyncMock(return_value=None)
+    with patch('novel_notify.bot.handlers.WebNovelScraper') as MockWebNovelScraperClass:
+        mock_scraper_instance = AsyncMock()
         # Return the same chapter, indicating no update
         mock_scraper_instance.quick_check_latest_chapter = AsyncMock(return_value=SAMPLE_NOVEL_METADATA.latest_chapter)
+        
+        # Mock the async context manager
+        MockWebNovelScraperClass.return_value.__aenter__ = AsyncMock(return_value=mock_scraper_instance)
+        MockWebNovelScraperClass.return_value.__aexit__ = AsyncMock(return_value=None)
 
         await bot_handlers.check_updates_command(mock_update, mock_context)
 
@@ -257,11 +263,13 @@ async def test_check_updates_command_with_updates(bot_handlers, mock_update, moc
         published="2023-01-02 12:00:00"
     )
 
-    with patch('novel_notify.bot.handlers.WebNovelScraper', new_callable=AsyncMock) as MockWebNovelScraperClass:
-        mock_scraper_instance = MockWebNovelScraperClass.return_value
-        mock_scraper_instance.__aenter__ = AsyncMock(return_value=mock_scraper_instance)
-        mock_scraper_instance.__aexit__ = AsyncMock(return_value=None)
+    with patch('novel_notify.bot.handlers.WebNovelScraper') as MockWebNovelScraperClass:
+        mock_scraper_instance = AsyncMock()
         mock_scraper_instance.quick_check_latest_chapter = AsyncMock(return_value=updated_chapter)
+        
+        # Mock the async context manager
+        MockWebNovelScraperClass.return_value.__aenter__ = AsyncMock(return_value=mock_scraper_instance)
+        MockWebNovelScraperClass.return_value.__aexit__ = AsyncMock(return_value=None)
 
         await bot_handlers.check_updates_command(mock_update, mock_context)
 
@@ -281,10 +289,10 @@ async def test_handle_url_message_valid_url(bot_handlers, mock_update, mock_cont
     """Test handling of a direct message containing a valid WebNovel URL."""
     mock_update.message.text = TEST_NOVEL_URL # Direct message with URL
 
-    with patch('novel_notify.bot.handlers.WebNovelScraper', new_callable=AsyncMock) as MockWebNovelScraperClass:
-        mock_scraper_instance = MockWebNovelScraperClass.return_value
-        mock_scraper_instance.__aenter__ = AsyncMock(return_value=mock_scraper_instance)
-        mock_scraper_instance.__aexit__ = AsyncMock(return_value=None)
+    with patch('novel_notify.bot.handlers.WebNovelScraper') as MockWebNovelScraperClass:
+        mock_scraper_instance = AsyncMock()
+        MockWebNovelScraperClass.return_value.__aenter__ = AsyncMock(return_value=mock_scraper_instance)
+        MockWebNovelScraperClass.return_value.__aexit__ = AsyncMock(return_value=None)
         mock_scraper_instance.scrape_novel_metadata = AsyncMock(return_value=SAMPLE_NOVEL_METADATA)
 
         mock_db_manager.get_user_subscriptions = MagicMock(return_value=[])
@@ -329,10 +337,10 @@ async def test_process_novel_url_already_subscribed(bot_handlers, mock_update, m
 @pytest.mark.asyncio
 async def test_process_novel_url_scraper_fails(bot_handlers, mock_update, mock_context, mock_db_manager):
     """Test _process_novel_url when the scraper fails to fetch metadata."""
-    with patch('novel_notify.bot.handlers.WebNovelScraper', new_callable=AsyncMock) as MockWebNovelScraperClass:
-        mock_scraper_instance = MockWebNovelScraperClass.return_value
-        mock_scraper_instance.__aenter__ = AsyncMock(return_value=mock_scraper_instance)
-        mock_scraper_instance.__aexit__ = AsyncMock(return_value=None)
+    with patch('novel_notify.bot.handlers.WebNovelScraper') as MockWebNovelScraperClass:
+        mock_scraper_instance = AsyncMock()
+        MockWebNovelScraperClass.return_value.__aenter__ = AsyncMock(return_value=mock_scraper_instance)
+        MockWebNovelScraperClass.return_value.__aexit__ = AsyncMock(return_value=None)
         mock_scraper_instance.scrape_novel_metadata = AsyncMock(return_value=None) # Scraper returns None
 
         mock_db_manager.get_user_subscriptions = MagicMock(return_value=[])
@@ -350,10 +358,10 @@ async def test_process_novel_url_scraper_fails(bot_handlers, mock_update, mock_c
 @pytest.mark.asyncio
 async def test_process_novel_url_db_save_metadata_fails(bot_handlers, mock_update, mock_context, mock_db_manager):
     """Test _process_novel_url when saving novel metadata to DB fails."""
-    with patch('novel_notify.bot.handlers.WebNovelScraper', new_callable=AsyncMock) as MockWebNovelScraperClass:
-        mock_scraper_instance = MockWebNovelScraperClass.return_value
-        mock_scraper_instance.__aenter__ = AsyncMock(return_value=mock_scraper_instance)
-        mock_scraper_instance.__aexit__ = AsyncMock(return_value=None)
+    with patch('novel_notify.bot.handlers.WebNovelScraper') as MockWebNovelScraperClass:
+        mock_scraper_instance = AsyncMock()
+        MockWebNovelScraperClass.return_value.__aenter__ = AsyncMock(return_value=mock_scraper_instance)
+        MockWebNovelScraperClass.return_value.__aexit__ = AsyncMock(return_value=None)
         mock_scraper_instance.scrape_novel_metadata = AsyncMock(return_value=SAMPLE_NOVEL_METADATA)
 
         mock_db_manager.get_user_subscriptions = MagicMock(return_value=[])
@@ -368,10 +376,10 @@ async def test_process_novel_url_db_save_metadata_fails(bot_handlers, mock_updat
 @pytest.mark.asyncio
 async def test_process_novel_url_db_add_subscription_fails(bot_handlers, mock_update, mock_context, mock_db_manager):
     """Test _process_novel_url when adding subscription to DB fails."""
-    with patch('novel_notify.bot.handlers.WebNovelScraper', new_callable=AsyncMock) as MockWebNovelScraperClass:
-        mock_scraper_instance = MockWebNovelScraperClass.return_value
-        mock_scraper_instance.__aenter__ = AsyncMock(return_value=mock_scraper_instance)
-        mock_scraper_instance.__aexit__ = AsyncMock(return_value=None)
+    with patch('novel_notify.bot.handlers.WebNovelScraper') as MockWebNovelScraperClass:
+        mock_scraper_instance = AsyncMock()
+        MockWebNovelScraperClass.return_value.__aenter__ = AsyncMock(return_value=mock_scraper_instance)
+        MockWebNovelScraperClass.return_value.__aexit__ = AsyncMock(return_value=None)
         mock_scraper_instance.scrape_novel_metadata = AsyncMock(return_value=SAMPLE_NOVEL_METADATA)
 
         mock_db_manager.get_user_subscriptions = MagicMock(return_value=[])
@@ -387,9 +395,13 @@ async def test_process_novel_url_db_add_subscription_fails(bot_handlers, mock_up
 @pytest.mark.asyncio
 async def test_process_novel_url_general_exception(bot_handlers, mock_update, mock_context, mock_db_manager):
     """Test _process_novel_url when a general exception occurs."""
-    with patch('novel_notify.bot.handlers.WebNovelScraper', new_callable=AsyncMock) as MockScraper:
-        mock_scraper_instance = MockScraper.return_value.__aenter__.return_value
+    with patch('novel_notify.bot.handlers.WebNovelScraper') as MockScraper:
+        mock_scraper_instance = AsyncMock()
         mock_scraper_instance.scrape_novel_metadata.side_effect = Exception("Unexpected error")
+        
+        # Mock the async context manager
+        MockScraper.return_value.__aenter__ = AsyncMock(return_value=mock_scraper_instance)
+        MockScraper.return_value.__aexit__ = AsyncMock(return_value=None)
 
         mock_db_manager.get_user_subscriptions = MagicMock(return_value=[])
 
