@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from telegram.ext import ConversationHandler
 
-from novel_notify.bot.handlers import BotHandlers, WAITING_FOR_URL
+from novel_notify.bot.handlers import WAITING_FOR_URL
 from novel_notify.database.models import NovelMetadata, Chapter, UserSubscription # Changed ChapterMetadata to Chapter
 
 # Test data
