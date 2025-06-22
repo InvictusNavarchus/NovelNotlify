@@ -1,5 +1,8 @@
 # Novel Notify Bot
 
+![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)
+![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg)
+
 A robust Telegram bot that monitors WebNovel pages for new chapter updates and notifies users when new chapters are available.
 
 ## Features
