@@ -112,4 +112,4 @@ novel_notify/
 
 ## License
 
-GPL-3.0 License
+This project is licensed under GPL-3.0. See [LICENSE](LICENSE) for details.
