@@ -27,7 +27,8 @@ novel-notify = "novel_notify.main:main"
 
 [tool.uv]
 dev-dependencies = [
-    "pytest>=7.0.0",
+    "pytest>=8.4.1",
++   "pytest-mock>=3.14.1",
     "black>=23.0.0",
     "isort>=5.12.0",
     "flake8>=6.0.0",
