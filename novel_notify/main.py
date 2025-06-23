@@ -182,9 +182,6 @@ async def main():
     if hasattr(signal, 'SIGALRM'):
         signal.signal(signal.SIGALRM, emergency_exit)
     
-    # Set up emergency exit handler for SIGALRM
-    signal.signal(signal.SIGALRM, emergency_exit)
-    
     try:
         logger.info("Starting Novel Notify Bot...")
         
