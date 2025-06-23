@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 # Global variables for graceful shutdown
 app: Optional[Application] = None
 scheduler: Optional[UpdateScheduler] = None
+shutdown_event = asyncio.Event()
 
 
 async def error_handler(update: object, context) -> None:
@@ -62,19 +63,9 @@ def signal_handler(signum, frame):
     """
     logger.info(f"Received signal {signum}. Shutting down gracefully...")
     
-    # Create new event loop for shutdown if current one is closed
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_closed():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    
-    # Run shutdown coroutine
-    loop.run_until_complete(shutdown())
-    sys.exit(0)
+    # Signal the event loop to shutdown gracefully
+    # Don't try to run coroutines from signal handler
+    shutdown_event.set()
 
 
 async def shutdown():
@@ -100,7 +91,10 @@ async def shutdown():
 
 async def main():
     """Main function to run the bot"""
-    global app, scheduler
+    global app, scheduler, shutdown_event
+    
+    # Initialize shutdown event
+    shutdown_event = asyncio.Event()
     
     try:
         logger.info("Starting Novel Notify Bot...")
@@ -179,12 +173,9 @@ async def main():
         
         logger.info("Bot is running! Press Ctrl+C to stop.")
         
-        # Keep the bot running
-        try:
-            while True:
-                await asyncio.sleep(1)
-        except KeyboardInterrupt:
-            logger.info("Keyboard interrupt received")
+        # Wait for shutdown event instead of infinite loop
+        await shutdown_event.wait()
+        logger.info("Shutdown event received")
         
     except Exception as e:
         logger.error(f"Failed to start bot: {e}")

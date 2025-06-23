@@ -33,7 +33,11 @@ class WebNovelScraper:
     
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit"""
-        await self.client.aclose()
+        try:
+            await self.client.aclose()
+        except Exception as e:
+            logger.warning(f"Error closing HTTP client: {e}")
+            # Don't re-raise as this could mask other exceptions
     
     async def scrape_novel_metadata(self, novel_id: str) -> Optional[NovelMetadata]:
         """
