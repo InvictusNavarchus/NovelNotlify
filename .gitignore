@@ -80,3 +80,6 @@ novels.db
 # Temporary files
 *.tmp
 *.temp
+
+# config files
+ecosystem.config.js
