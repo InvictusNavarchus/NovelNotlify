@@ -445,21 +445,23 @@ I'll notify you when new chapters are released!
                         # Always update the last_updated timestamp to show when we last checked
                         current_metadata.last_updated = time.time()
                         
-                        # Check if there's an update
-                        if latest_chapter.title != current_metadata.latest_chapter.title:
-                            # Update metadata with new chapter
-                            current_metadata.latest_chapter = latest_chapter
-                            self.db.save_novel_metadata(current_metadata)
-                            
+                        # Check if there's a new chapter
+                        is_new_chapter = latest_chapter.title != current_metadata.latest_chapter.title
+                        
+                        # Always update the latest chapter info (including published time)
+                        # This ensures that even if the chapter title is the same, any updates
+                        # to the published time or other chapter details are captured
+                        current_metadata.latest_chapter = latest_chapter
+                        self.db.save_novel_metadata(current_metadata)
+                        
+                        if is_new_chapter:
+                            # New chapter found - add to updates
                             updates_found.append({
                                 'title': current_metadata.novel_title,
                                 'chapter': latest_chapter.title,
                                 'url': format_novel_url(subscription.novel_id),
                                 'published': latest_chapter.published
                             })
-                        else:
-                            # No update found, but save the updated timestamp
-                            self.db.save_novel_metadata(current_metadata)
                         
                         # Small delay to avoid rate limiting
                         await asyncio.sleep(1)

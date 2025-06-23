@@ -131,19 +131,22 @@ class UpdateScheduler:
         # Always update the last_updated timestamp to show when we last checked
         current_metadata.last_updated = time.time()
         
-        # Check if there's an update
-        if latest_chapter.title == current_metadata.latest_chapter.title:
-            # No update found, but save the updated timestamp
-            self.db.save_novel_metadata(current_metadata)
-            return
+        # Check if there's a new chapter
+        is_new_chapter = latest_chapter.title != current_metadata.latest_chapter.title
         
-        logger.info(f"Update found for novel {current_metadata.novel_title}: {latest_chapter.title}")
-        
-        # Update metadata with new chapter
+        # Always update the latest chapter info (including published time)
+        # This ensures that even if the chapter title is the same, any updates
+        # to the published time or other chapter details are captured
         current_metadata.latest_chapter = latest_chapter
         self.db.save_novel_metadata(current_metadata)
         
-        # Notify subscribers
+        if not is_new_chapter:
+            # No new chapter, just updated metadata
+            return
+        
+        logger.info(f"New chapter found for novel {current_metadata.novel_title}: {latest_chapter.title}")
+        
+        # Notify subscribers about the new chapter
         await self._notify_subscribers(novel_id, current_metadata, latest_chapter)
     
     async def _notify_subscribers(self, novel_id: str, metadata, new_chapter):
