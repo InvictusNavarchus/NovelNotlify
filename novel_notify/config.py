@@ -32,5 +32,36 @@ class Config:
         return f"{self.cors_proxy_url}https://www.webnovel.com"
 
 
-# Global config instance
-config = Config()
+# Global config instance, loaded on first access
+_config_instance = None
+
+def load_app_config() -> Config:
+    """Loads and returns the application configuration."""
+    global _config_instance
+    if _config_instance is None:
+        _config_instance = Config()
+    return _config_instance
+
+# Make it accessible as 'config' for existing import patterns,
+# but it's now a function that needs to be called.
+# For direct use: from novel_notify.config import load_app_config; cfg = load_app_config()
+# For patching: mock the load_app_config function or the _config_instance.
+# To maintain the 'config.VARIABLE' access pattern after first load,
+# we can assign the loaded config to a module level variable if preferred,
+# but using a function is cleaner for testing. Let's try this first.
+
+# If we want to keep the direct 'config.VARIABLE' style after initial import in app code (not tests):
+# config = load_app_config()
+# However, this would re-trigger the original problem for tests.
+# So, application code will need to change from 'from .config import config' to
+# 'from .config import load_app_config' and then 'app_config = load_app_config()'.
+
+# For minimal changes to app code, let's try a lazy loader property approach for 'config'
+class ConfigProxy:
+    _instance = None
+    def __getattr__(self, name):
+        if ConfigProxy._instance is None:
+            ConfigProxy._instance = Config()
+        return getattr(ConfigProxy._instance, name)
+
+config = ConfigProxy()
