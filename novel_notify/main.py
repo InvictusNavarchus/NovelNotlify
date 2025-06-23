@@ -129,8 +129,9 @@ async def main():
     """Main function to run the bot"""
     global app, scheduler, shutdown_event
     
-    # Initialize shutdown event
-    shutdown_event = asyncio.Event()
+    # Set up signal handlers for graceful shutdown early to avoid race conditions
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
     
     try:
         logger.info("Starting Novel Notify Bot...")
@@ -175,10 +176,6 @@ async def main():
         
         # Add error handler
         app.add_error_handler(error_handler)
-        
-        # Set up signal handlers for graceful shutdown
-        signal.signal(signal.SIGINT, signal_handler)
-        signal.signal(signal.SIGTERM, signal_handler)
         
         # Start scheduler
         scheduler.start()
