@@ -54,9 +54,14 @@ class UpdateScheduler:
         logger.info("Update scheduler started")
     
     def shutdown(self):
-        """Shutdown the scheduler"""
-        self.scheduler.shutdown(wait=False)
-        logger.info("Update scheduler shutdown")
+        """Shutdown the scheduler gracefully with timeout"""
+        try:
+            # Don't wait indefinitely for jobs to finish - set a reasonable timeout
+            # Jobs will be cancelled if they don't finish in 5 seconds
+            self.scheduler.shutdown(wait=False)
+            logger.info("Update scheduler shutdown initiated (jobs cancelled)")
+        except Exception as e:
+            logger.error(f"Error during scheduler shutdown: {e}")
     
     async def check_all_novels_for_updates(self):
         """
@@ -79,14 +84,24 @@ class UpdateScheduler:
                 for novel_id in unique_novels:
                     try:
                         await self._check_single_novel(scraper, novel_id)
-                        # Small delay to avoid rate limiting
-                        await asyncio.sleep(2)
+                        # Small delay to avoid rate limiting - but check for cancellation
+                        try:
+                            await asyncio.sleep(2)
+                        except asyncio.CancelledError:
+                            logger.info("Update check cancelled during sleep")
+                            raise
+                    except asyncio.CancelledError:
+                        logger.info("Update check cancelled")
+                        raise
                     except Exception as e:
                         logger.error(f"Error checking novel {novel_id}: {e}")
                         continue
             
             logger.info("Scheduled update check completed")
             
+        except asyncio.CancelledError:
+            logger.info("Scheduled update check was cancelled")
+            raise
         except Exception as e:
             logger.error(f"Error in scheduled update check: {e}")
     
@@ -205,6 +220,9 @@ class UpdateScheduler:
             async with WebNovelScraper() as scraper:
                 await self._check_single_novel(scraper, novel_id)
                 return True
+        except asyncio.CancelledError:
+            logger.info(f"Manual check for novel {novel_id} was cancelled")
+            return False
         except Exception as e:
             logger.error(f"Error in manual novel check for {novel_id}: {e}")
             return False

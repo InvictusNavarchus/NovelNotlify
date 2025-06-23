@@ -69,7 +69,7 @@ def test_scheduler_start_shutdown(update_scheduler):
     update_scheduler.start()
     update_scheduler.scheduler.start.assert_called_once()
     update_scheduler.shutdown()
-    update_scheduler.scheduler.shutdown.assert_called_once_with(wait=False)
+    update_scheduler.scheduler.shutdown.assert_called_once_with(wait=True)
 
 @pytest.mark.asyncio
 @patch('novel_notify.bot.scheduler.WebNovelScraper')
