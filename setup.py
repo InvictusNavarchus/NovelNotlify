@@ -4,7 +4,6 @@ Setup script for Novel Notify Bot
 """
 
 import os
-import sys
 
 def create_env_file():
     """Create .env file if it doesn't exist"""
