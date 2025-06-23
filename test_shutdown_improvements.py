@@ -5,7 +5,6 @@ Simple test to verify shutdown improvements work properly
 
 import asyncio
 import sys
-import signal
 from novel_notify.main import shutdown_event, shutdown
 
 async def test_shutdown_improvements():
