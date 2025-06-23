@@ -41,7 +41,14 @@ async def error_handler(update: object, context) -> None:
         update: The update that caused the error
         context: Bot context containing error information
     """
-    logger.error(f"Exception while handling an update: {context.error}")
+    error = context.error
+    
+    # Don't log network errors that occur during shutdown
+    if "httpx.ReadError" in str(error) or "NetworkError" in str(error):
+        logger.debug(f"Network error (likely during shutdown): {error}")
+        return
+    
+    logger.error(f"Exception while handling an update: {error}")
     
     # Try to notify user if update is available
     if isinstance(update, Update) and update.effective_message:
@@ -65,7 +72,12 @@ def signal_handler(signum, frame):
     
     # Signal the event loop to shutdown gracefully
     # Don't try to run coroutines from signal handler
-    shutdown_event.set()
+    try:
+        shutdown_event.set()
+    except Exception as e:
+        logger.error(f"Error setting shutdown event: {e}")
+        # Force exit if we can't set the event
+        sys.exit(1)
 
 
 async def shutdown():
@@ -80,11 +92,35 @@ async def shutdown():
             logger.info("Scheduler stopped")
         
         if app:
-            await app.stop()
-            await app.shutdown()
-            logger.info("Bot stopped")
+            # Stop updater first
+            try:
+                await app.updater.stop()
+                logger.info("Updater stopped")
+            except Exception as e:
+                logger.warning(f"Error stopping updater: {e}")
+            
+            # Then stop the application
+            try:
+                await app.stop()
+                logger.info("Application stopped")
+            except Exception as e:
+                logger.warning(f"Error stopping application: {e}")
+            
+            # Finally shutdown the application
+            try:
+                await app.shutdown()
+                logger.info("Application shutdown complete")
+            except Exception as e:
+                logger.warning(f"Error during application shutdown: {e}")
+                
     except Exception as e:
         logger.error(f"Error during shutdown: {e}")
+    
+    # Give a moment for any remaining tasks to finish
+    try:
+        await asyncio.sleep(0.1)
+    except Exception:
+        pass
     
     logger.info("Shutdown complete")
 
@@ -174,9 +210,12 @@ async def main():
         logger.info("Bot is running! Press Ctrl+C to stop.")
         
         # Wait for shutdown event instead of infinite loop
-        await shutdown_event.wait()
-        logger.info("Shutdown event received")
-        
+        try:
+            await shutdown_event.wait()
+            logger.info("Shutdown event received")
+        except Exception as e:
+            logger.error(f"Error waiting for shutdown event: {e}")
+            
     except Exception as e:
         logger.error(f"Failed to start bot: {e}")
         raise
@@ -196,12 +235,31 @@ def run():
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
         
+        # Run the main coroutine
         asyncio.run(main())
+        
     except KeyboardInterrupt:
         logger.info("Bot stopped by user")
     except Exception as e:
         logger.error(f"Fatal error: {e}")
         sys.exit(1)
+    finally:
+        # Cancel any remaining tasks
+        try:
+            # Get the current event loop
+            loop = asyncio.get_event_loop()
+            if not loop.is_closed():
+                # Cancel all remaining tasks
+                pending = asyncio.all_tasks(loop)
+                for task in pending:
+                    task.cancel()
+                
+                # Give tasks a moment to cancel
+                if pending:
+                    loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+        except Exception:
+            # Ignore errors during cleanup
+            pass
 
 
 if __name__ == "__main__":

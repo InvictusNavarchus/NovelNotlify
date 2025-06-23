@@ -55,6 +55,7 @@ CORS_PROXY_URL=https://cors.fadel.web.id/  # CORS proxy for WebNovel requests
 2. Open Telegram and find your bot
 3. Send `/start` to begin
 4. Send a WebNovel URL to start tracking a novel
+5. Use `Ctrl+C` to stop the bot gracefully
 
 ### Commands
 
