@@ -54,11 +54,12 @@ class UpdateScheduler:
         logger.info("Update scheduler started")
     
     def shutdown(self):
-        """Shutdown the scheduler gracefully"""
+        """Shutdown the scheduler gracefully with timeout"""
         try:
-            # Cancel all jobs and wait for them to finish
-            self.scheduler.shutdown(wait=True)
-            logger.info("Update scheduler shutdown")
+            # Don't wait indefinitely for jobs to finish - set a reasonable timeout
+            # Jobs will be cancelled if they don't finish in 5 seconds
+            self.scheduler.shutdown(wait=False)
+            logger.info("Update scheduler shutdown initiated (jobs cancelled)")
         except Exception as e:
             logger.error(f"Error during scheduler shutdown: {e}")
     

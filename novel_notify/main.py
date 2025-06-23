@@ -80,49 +80,94 @@ def signal_handler(signum, frame):
         sys.exit(1)
 
 
+def emergency_exit(signum, frame):
+    """
+    Emergency exit handler - forces termination if shutdown hangs
+    
+    Args:
+        signum: Signal number  
+        frame: Current stack frame
+    """
+    logger.critical("Emergency exit triggered - shutdown took too long, forcing termination")
+    sys.exit(1)
+
+
 async def shutdown():
-    """Graceful shutdown of the bot"""
+    """Graceful shutdown of the bot with timeouts to prevent hanging"""
     global app, scheduler
     
     logger.info("Starting graceful shutdown...")
+    shutdown_timeout = 30.0  # Total shutdown timeout in seconds
+    operation_timeout = 10.0  # Timeout for individual operations
+    
+    start_time = asyncio.get_event_loop().time()
     
     try:
+        # Step 1: Stop scheduler (non-async, should be quick)
         if scheduler:
-            scheduler.shutdown()
-            logger.info("Scheduler stopped")
+            try:
+                scheduler.shutdown()
+                logger.info("Scheduler stopped")
+            except Exception as e:
+                logger.warning(f"Error stopping scheduler: {e}")
         
         if app:
-            # Stop updater first
+            # Step 2: Stop updater with timeout
             try:
-                await app.updater.stop()
+                await asyncio.wait_for(app.updater.stop(), timeout=operation_timeout)
                 logger.info("Updater stopped")
+            except asyncio.TimeoutError:
+                logger.warning(f"Updater stop timed out after {operation_timeout}s")
             except Exception as e:
                 logger.warning(f"Error stopping updater: {e}")
             
-            # Then stop the application
+            # Check if we still have time for remaining operations
+            elapsed = asyncio.get_event_loop().time() - start_time
+            if elapsed >= shutdown_timeout:
+                logger.warning("Shutdown timeout reached, forcing exit")
+                return
+            
+            # Step 3: Stop application with timeout
+            remaining_time = shutdown_timeout - elapsed
+            app_timeout = min(operation_timeout, remaining_time)
             try:
-                await app.stop()
+                await asyncio.wait_for(app.stop(), timeout=app_timeout)
                 logger.info("Application stopped")
+            except asyncio.TimeoutError:
+                logger.warning(f"Application stop timed out after {app_timeout}s")
             except Exception as e:
                 logger.warning(f"Error stopping application: {e}")
             
-            # Finally shutdown the application
+            # Check if we still have time for final shutdown
+            elapsed = asyncio.get_event_loop().time() - start_time
+            if elapsed >= shutdown_timeout:
+                logger.warning("Shutdown timeout reached, forcing exit")
+                return
+            
+            # Step 4: Final application shutdown with timeout
+            remaining_time = shutdown_timeout - elapsed
+            final_timeout = min(operation_timeout, remaining_time)
             try:
-                await app.shutdown()
+                await asyncio.wait_for(app.shutdown(), timeout=final_timeout)
                 logger.info("Application shutdown complete")
+            except asyncio.TimeoutError:
+                logger.warning(f"Application shutdown timed out after {final_timeout}s")
             except Exception as e:
                 logger.warning(f"Error during application shutdown: {e}")
                 
     except Exception as e:
         logger.error(f"Error during shutdown: {e}")
     
-    # Give a moment for any remaining tasks to finish
+    # Give a brief moment for any remaining cleanup
     try:
-        await asyncio.sleep(0.1)
+        await asyncio.wait_for(asyncio.sleep(0.1), timeout=1.0)
+    except asyncio.TimeoutError:
+        pass
     except Exception:
         pass
     
-    logger.info("Shutdown complete")
+    total_time = asyncio.get_event_loop().time() - start_time
+    logger.info(f"Shutdown complete (took {total_time:.2f}s)")
 
 
 async def main():
@@ -132,6 +177,13 @@ async def main():
     # Set up signal handlers for graceful shutdown early to avoid race conditions
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
+    
+    # Set up emergency exit handler for SIGALRM (if available on platform)
+    if hasattr(signal, 'SIGALRM'):
+        signal.signal(signal.SIGALRM, emergency_exit)
+    
+    # Set up emergency exit handler for SIGALRM
+    signal.signal(signal.SIGALRM, emergency_exit)
     
     try:
         logger.info("Starting Novel Notify Bot...")
@@ -217,7 +269,21 @@ async def main():
         logger.error(f"Failed to start bot: {e}")
         raise
     finally:
-        await shutdown()
+        # Set up emergency exit alarm as final safety net (45 seconds total)
+        if hasattr(signal, 'SIGALRM'):
+            signal.alarm(45)  # Force exit after 45 seconds if shutdown hangs
+        
+        # Ensure shutdown doesn't hang indefinitely
+        try:
+            await asyncio.wait_for(shutdown(), timeout=35.0)  # Slightly longer than shutdown's internal timeout
+        except asyncio.TimeoutError:
+            logger.error("Shutdown process timed out after 35 seconds, forcing exit")
+        except Exception as e:
+            logger.error(f"Error during shutdown: {e}")
+        finally:
+            # Cancel the emergency alarm if shutdown completed normally
+            if hasattr(signal, 'SIGALRM'):
+                signal.alarm(0)
 
 
 def run():
